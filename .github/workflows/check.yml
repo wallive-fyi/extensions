@@ -1,0 +1,89 @@
+# The checks on a pull request (plans/marketplace.md, Checks on a pull request), on a macOS runner because the wallive
+# CLI and Godot's exports are macOS binaries. The job reads the pull request's code and runs none of it: dependencies
+# install with --ignore-scripts, and the token cannot write to the repository.
+name: Check
+
+on:
+  pull_request:
+    paths:
+      - "extensions/**"
+      - "removed.json"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      WALLIVE_CLI_URL: ${{ vars.WALLIVE_CLI_URL }}
+      WALLIVE_CLI_SHA256: ${{ vars.WALLIVE_CLI_SHA256 }}
+      GODOT_SHA256: ${{ vars.GODOT_SHA256 }}
+      BASE: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Read removed.json
+        run: python3 scripts/check_removed.py removed.json
+
+      - name: Find the changed folders
+        id: changed
+        run: echo "folders=$(python3 scripts/changed.py "$BASE" HEAD | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.changed.outputs.folders != ''
+        with:
+          bun-version: "1.3.14"
+
+      # The CLI's Bun lookup reads the account's home, not PATH alone (experiment E4); BUN_INSTALL points it at the Bun
+      # setup-bun put in place.
+      - name: Point the CLI at Bun
+        if: steps.changed.outputs.folders != ''
+        run: echo "BUN_INSTALL=$HOME/.bun" >> "$GITHUB_ENV"
+
+      - name: Fetch the wallive CLI and Godot
+        if: steps.changed.outputs.folders != ''
+        run: scripts/tools.sh
+
+      - name: Check each changed folder
+        if: steps.changed.outputs.folders != ''
+        env:
+          FOLDERS: ${{ steps.changed.outputs.folders }}
+        run: |
+          status=0
+          for folder in $FOLDERS; do
+            echo "::group::$folder"
+            scripts/prepare.sh check "$folder" || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+      - name: Write the reviewer's notes
+        if: always() && steps.changed.outputs.folders != ''
+        env:
+          FOLDERS: ${{ steps.changed.outputs.folders }}
+        run: |
+          python3 scripts/review_notes.py --base "$BASE" --installed "$WALLIVE_HOME/packages" $FOLDERS > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md" >> "$GITHUB_STEP_SUMMARY"
+
+      # A pull request from a fork gets a read-only token, so the comment can fail; the notes stay in the job summary.
+      - name: Post the notes on the pull request
+        if: always() && steps.changed.outputs.folders != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/notes.md" --edit-last || gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/notes.md"

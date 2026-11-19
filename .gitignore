@@ -1,0 +1,6 @@
+build/
+.DS_Store
+__pycache__/
+# A folder keeps its own .gitignore for these, which pkg check --store reads; this one keeps them out of a commit here.
+.wallive/
+node_modules/

@@ -1,0 +1,112 @@
+# Publishing on a merge to main (plans/marketplace.md, Publishing): build each changed folder into its zip, write the
+# index from every folder, sign it, upload. The job runs in the protected environment `store`, which holds the signing
+# key (STORE_SIGNING_KEY, the base64 of the raw 32-byte Ed25519 private key) and the upload token; the key reaches the
+# signer as an environment variable and is written to no file.
+name: Publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extensions/**"
+      - "removed.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: macos-15
+    timeout-minutes: 45
+    environment: store
+    env:
+      WALLIVE_CLI_URL: ${{ vars.WALLIVE_CLI_URL }}
+      WALLIVE_CLI_SHA256: ${{ vars.WALLIVE_CLI_SHA256 }}
+      GODOT_SHA256: ${{ vars.GODOT_SHA256 }}
+      # The Wallive version an extension without its own `wallive` key needs: the release the check ran with.
+      WALLIVE_MINIMUM: ${{ vars.WALLIVE_MINIMUM }}
+      STORE_HOST: ${{ vars.STORE_HOST }}
+      STORE_BUCKET: ${{ vars.STORE_BUCKET }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+
+      - name: Fetch the wallive CLI and Godot
+        run: scripts/tools.sh
+
+      - name: Read the index the host serves
+        env:
+          STORE_SIGNING_KEY: ${{ secrets.STORE_SIGNING_KEY }}
+        run: |
+          : "${STORE_HOST:?the repository variable STORE_HOST is not set: the store has no host yet.}"
+          mkdir -p "$RUNNER_TEMP/served"
+          status=$(curl -s -o "$RUNNER_TEMP/served/index.json" -w '%{http_code}' "https://$STORE_HOST/index.json")
+          if [ "$status" = 404 ]; then
+            echo "The host serves no index yet; every folder is built."
+            rm -f "$RUNNER_TEMP/served/index.json"
+          else
+            [ "$status" = 200 ] || { echo "error: https://$STORE_HOST/index.json answered $status" >&2; exit 1; }
+            curl -fsS -o "$RUNNER_TEMP/served/index.json.sig" "https://$STORE_HOST/index.json.sig"
+            swift scripts/sign.swift --verify "$RUNNER_TEMP/served/index.json"
+          fi
+
+      - name: Find the folders to build
+        id: changed
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -f "$RUNNER_TEMP/served/index.json" ]; then
+            commit=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["commit"])' "$RUNNER_TEMP/served/index.json")
+            echo "folders=$(python3 scripts/changed.py "$commit" HEAD | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          else
+            echo "folders=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Copy the checkout and ready the changed folders
+        env:
+          FOLDERS: ${{ steps.changed.outputs.folders }}
+        run: |
+          echo "BUN_INSTALL=$HOME/.bun" >> "$GITHUB_ENV"
+          export BUN_INSTALL="$HOME/.bun"
+          stage="$RUNNER_TEMP/stage"
+          rsync -a --exclude .git ./ "$stage/"
+          if [ -f "$RUNNER_TEMP/served/index.json" ]; then
+            build=$FOLDERS
+          else
+            build=$(cd extensions && for f in */; do [ -f "$f/wallive.toml" ] && echo "${f%/}"; done)
+          fi
+          for folder in $build; do scripts/prepare.sh publish "$folder" "$stage"; done
+          echo "BUILD=$(echo $build)" >> "$GITHUB_ENV"
+
+      - name: Build the zips and index.json
+        run: |
+          previous=()
+          [ -f "$RUNNER_TEMP/served/index.json" ] && previous=(--previous "$RUNNER_TEMP/served/index.json")
+          python3 scripts/build.py --registry "$RUNNER_TEMP/stage" --out "$RUNNER_TEMP/build" --commit "$GITHUB_SHA" \
+            --wallive "${WALLIVE_MINIMUM:?the repository variable WALLIVE_MINIMUM is not set.}" "${previous[@]}" $BUILD
+
+      - name: Sign index.json
+        env:
+          STORE_SIGNING_KEY: ${{ secrets.STORE_SIGNING_KEY }}
+        run: swift scripts/sign.swift "$RUNNER_TEMP/build/index.json"
+
+      - name: Upload
+        env:
+          STORE_UPLOAD_TOKEN: ${{ secrets.STORE_UPLOAD_TOKEN }}
+        run: scripts/upload.sh "$RUNNER_TEMP/build"
