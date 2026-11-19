@@ -42,13 +42,13 @@ served() {
 }
 
 cd "$build"
-find a -name '*.zip' | sort | while read -r zip; do
+[ -d a ] && find a -name '*.zip' | sort | while read -r zip; do
     if served "$zip"; then
         echo "error: https://$STORE_HOST/$zip is served; a published version is not written over." >&2
         exit 1
     fi
     put "$zip"
 done
-find media -type f | sort | while read -r file; do put "$file"; done
+[ -d media ] && find media -type f | sort | while read -r file; do put "$file"; done
 put index.json
 put index.json.sig
