@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@wallive/sdk",
+    "paths": {
+      "@wallive/sdk": ["./.wallive/sdk/index.ts"],
+      "@wallive/sdk/*": ["./.wallive/sdk/*"],
+      "react": ["./.wallive/sdk/node_modules/@types/react", "./.wallive/sdk/node_modules/react"],
+      "react/*": ["./.wallive/sdk/node_modules/@types/react/*", "./.wallive/sdk/node_modules/react/*"]
+    }
+  },
+  "include": ["src", "wallive-env.d.ts"]
+}

@@ -1,0 +1,100 @@
+name = "Focus Island"
+description = "A pomodoro timer with focus statistics: the countdown runs on the island, the menu bar shows the time left, and a switch to a distracting app during focus gets a gentle note. The page holds a year heat map of focus and a weekly report. Data stays on this Mac."
+
+[command.page]
+title = "Focus Island"
+description = "Open the Focus Island page: the session running now, a year heat map of focus minutes, this week's report and the sessions of a day."
+
+[command.start]
+title = "Start Focus"
+description = "Start a focus session. minutes defaults to the focus length setting (25); label names what the session is for and shows in the report; without it the session has no label. Starting while a session or a break runs replaces it; a replaced focus session is recorded with the minutes it ran. Returns the status sentence; status reads the fields."
+
+[command.start.args.minutes]
+title = "Minutes"
+
+[command.start.args.label]
+title = "Working on"
+
+[command.pause]
+title = "Pause Focus"
+description = "Pause the running focus session or break; the countdown holds until resume. Fails with a message when nothing runs. Returns the status sentence; status reads the fields."
+
+[command.resume]
+title = "Resume Focus"
+description = "Resume the paused focus session or break. Fails with a message when nothing is paused. Returns the status sentence; status reads the fields."
+
+[command.stop]
+title = "End Focus"
+description = "End the running focus session or break now. A focus session of 1 minute or more is recorded as stopped with the minutes it ran. Returns the status sentence; status reads the fields."
+
+[command.skip]
+title = "Skip Break"
+description = "End the running break and start the next focus session at once. Fails with a message when no break runs. Returns the status sentence; status reads the fields."
+
+[command.rest]
+title = "Start Break"
+description = "Start the break the cycle calls for next: a short break, or a long break after every few focus sessions (long_break_every, 4 by default). Replaces what runs; a replaced focus session is recorded with the minutes it ran. Returns the status sentence; status reads the fields."
+
+[command.status]
+title = "Focus Status"
+description = "Read the state: phase (focus, short-break, long-break or idle), paused, label, the end time and seconds left, the round in the cycle, and today's minutes and finished sessions."
+
+[command.stats]
+title = "Focus Statistics"
+description = "Read focus statistics for the last days (1 to 371, 7 by default): minutes and finished sessions per day, the total, the current and best streak of days with a finished session, the most used labels and the drift count (switches to a distracting app during focus)."
+
+[command.stats.args.days]
+title = "Days"
+
+[command.distractions]
+title = "Distracting Apps"
+description = "Read or change the distracting apps: a switch to one of them during focus gets a note on the island. add takes app names or bundle IDs (an installed app's name resolves to its bundle ID; another name is kept as typed); remove takes the names or bundle IDs to drop. Without args it reads the list. Returns a sentence naming the apps, and says so when drift alerts are off in settings."
+
+[command.distractions.args.add]
+title = "Add"
+
+[command.distractions.args.remove]
+title = "Remove"
+
+[command.fire]
+title = "Phase Due"
+description = "Ends a focus session or a break when its schedule comes due."
+
+[command.drift]
+title = "App Switched"
+description = "Receives app switches while a focus session runs."
+
+[command.relocalize]
+title = "Language Switched"
+description = "Shows the island and the menu bar again in the new interface language."
+
+[command.activity]
+title = "Menu Bar Buttons"
+description = "Handles the buttons of the menu bar popover."
+
+[setting.drift]
+title = "Note a switch to a distracting app (pick the apps under Distracting Apps on the Focus Island page)"
+
+[setting.focus_minutes]
+title = "Focus length (minutes)"
+
+[setting.short_break_minutes]
+title = "Short break (minutes)"
+
+[setting.long_break_minutes]
+title = "Long break (minutes)"
+
+[setting.long_break_every]
+title = "Long break after this many sessions"
+
+[setting.auto_break]
+title = "Start the break when focus ends"
+
+[setting.menubar]
+title = "Show the time left in the menu bar"
+
+[setting.sound]
+title = "Sound cue"
+
+[setting.sound_volume]
+title = "Sound cue volume"
