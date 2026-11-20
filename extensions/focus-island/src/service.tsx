@@ -2,21 +2,24 @@
 // state.
 import { page, service } from "@wallive/sdk";
 import * as focus from "./focus";
+import { distractions, loadApps, resolveApp } from "./distractions";
 import { activityClicked } from "./island";
 import { FocusPage } from "./page";
 import { setLanguage } from "./strings";
 
+// No call says whether a person or an agent runs it, so the commands that change the state answer with the status
+// sentence: the launcher shows it as a line, a hotkey as a toast. Agents read the fields with status.
 const then = (action: () => Promise<void>) => async () => {
   await action();
-  return focus.statusView();
+  return focus.statusView().text as string;
 };
 
 service({
-  page: () => focus.ready().then(() => page(<FocusPage />)),
+  page: () => Promise.all([focus.ready(), loadApps()]).then(() => page(<FocusPage />)),
 
   start: async ({ minutes, label }) => {
     await focus.startFocus(minutes, label);
-    return focus.statusView();
+    return focus.statusView().text as string;
   },
   rest: then(focus.startBreak),
   pause: then(focus.pause),
@@ -32,6 +35,15 @@ service({
     return focus.statsView(days);
   },
 
+  distractions: async ({ add, remove }) => {
+    await Promise.all([focus.ready(), loadApps()]);
+    if (add?.length || remove?.length) {
+      const gone = new Set((remove ?? []).flatMap((r) => [r.trim().toLowerCase(), resolveApp(r).value.toLowerCase()]));
+      const kept = distractions().filter((a) => !gone.has(a.value.toLowerCase()) && !gone.has(a.title.toLowerCase()));
+      await focus.updateDistractions([...kept, ...(add ?? []).map(resolveApp)]);
+    }
+    return focus.distractionsText();
+  },
   activity: async (input: { event?: { body?: { type?: string; id?: string } } }) => {
     const body = input.event?.body;
     const name = body?.type === "click" ? activityClicked(body.id) : null;

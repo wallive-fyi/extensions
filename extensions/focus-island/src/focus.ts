@@ -4,9 +4,10 @@
 // again when it is gone. A live service finishes the phase on its own timeout and cancels the schedule.
 import { call, env, service, type Json } from "@wallive/sdk";
 import { MINUTE, addDays, clock, dayOf, wallTime } from "./clock";
+import { distractions, isDistraction, loadDistractions, setDistractions, titled, type App } from "./distractions";
 import { doneActivity, driftActivity, focusActivity, menubarActivity, type Done, type Phase, type Run } from "./island";
 import { Ledger, type Session } from "./stats";
-import { minutes, t } from "./strings";
+import { currentLanguage, minutes, t } from "./strings";
 
 export type { Phase, Run } from "./island";
 
@@ -18,7 +19,6 @@ const settings = env.settings as {
   auto_break?: boolean;
   menubar?: boolean;
   drift?: boolean;
-  distractions?: string;
   sound?: boolean;
   sound_volume?: number;
 };
@@ -105,7 +105,7 @@ async function readSessions(): Promise<Session[]> {
 }
 
 async function load(): Promise<void> {
-  const [saved, sessions] = await Promise.all([call("sys.db.get", { collection: "state", id: "now" }), readSessions()]);
+  const [saved, sessions] = await Promise.all([call("sys.db.get", { collection: "state", id: "now" }), readSessions(), loadDistractions()]);
   // The SDK resolves a missing document as {}, an object without doc.
   const doc = (saved as { doc?: Saved } | null)?.doc;
   if (doc) Object.assign(state, { run: doc.run, round: doc.round ?? 0, lastLabel: doc.lastLabel ?? "" });
@@ -204,7 +204,7 @@ async function endRun(): Promise<void> {
 export async function startFocus(minutesArg?: number, label?: string): Promise<void> {
   await ready();
   await endRun();
-  const name = (label ?? state.lastLabel).trim().slice(0, 80);
+  const name = (label ?? "").trim().slice(0, 80);
   state.lastLabel = name;
   const length = Math.round((minutesArg ?? focusMinutes()) * MINUTE);
   begin("focus", name, Math.max(MINUTE, length));
@@ -370,20 +370,20 @@ const focusing = () => state.run?.phase === "focus" && state.run.end !== null;
 
 /** Subscribes to app switches while a focus session runs, and not otherwise, so idle switches start no process. */
 async function watchDrift(): Promise<void> {
-  const want = settings.drift !== false && distractions().size > 0 && focusing();
+  const want = driftOn() && distractions().length > 0 && focusing();
   if (want === watching) return;
   watching = want;
   if (want) await call("sys.events.subscribe", { key: "drift", on: "sys.app.activated", command: "drift" });
   else await call("sys.events.unsubscribe", { key: "drift" });
 }
 
-function distractions(): Set<string> {
-  return new Set(
-    (settings.distractions ?? "")
-      .split(/[\n,]/)
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean),
-  );
+export const driftOn = () => settings.drift !== false;
+
+/** Replaces the distraction list, then redraws the page and subscribes or unsubscribes to match. */
+export async function updateDistractions(next: App[]): Promise<void> {
+  await ready();
+  await setDistractions(next);
+  await changed();
 }
 
 interface Activated {
@@ -402,10 +402,8 @@ export async function drifted(event: Activated | undefined): Promise<void> {
   }
   // An event delivered late, from before this session, does not count against it.
   if (event.time && Date.parse(event.time) < run.started) return;
-  const list = distractions();
   const { bundle, name } = event.body;
-  const hit = [bundle, name].some((v) => v && list.has(v.toLowerCase()));
-  if (!hit) return;
+  if (!isDistraction(bundle, name)) return;
   run.drifts += 1;
   await save();
   await changed();
@@ -416,6 +414,14 @@ export async function drifted(event: Activated | undefined): Promise<void> {
 }
 
 // ---- Views for the commands ----
+
+/** A sentence of the distraction list for the command, with the switch's state when alerts are off. */
+export function distractionsText(): string {
+  const apps = titled();
+  const names = new Intl.ListFormat(currentLanguage(), { type: "conjunction" }).format(apps.map((a) => a.title));
+  const text = apps.length === 0 ? t("distractions.none") : t("distractions.text", { n: apps.length, list: names });
+  return driftOn() ? text : t("joined.sentences", { a: text, b: t("distractions.off") });
+}
 
 export function statusView(): { [key: string]: Json } {
   const run = state.run;
@@ -429,7 +435,8 @@ export function statusView(): { [key: string]: Json } {
     return { phase: "idle", paused: false, ...base, text: t("status.idle", { minutes: minutes(today.minutes), n: today.finished }) };
   }
   const leftMs = left(run);
-  const phase = run.phase === "focus" && run.label ? run.label : t(`phase.${run.phase}`);
+  const phase = t(`phase.${run.phase}`);
+  const labeled = run.phase === "focus" && run.label ? ".label" : "";
   return {
     phase: run.phase,
     paused: run.end === null,
@@ -440,8 +447,8 @@ export function statusView(): { [key: string]: Json } {
     ...base,
     text:
       run.end === null
-        ? t("status.paused", { phase, left: minutes(Math.ceil(leftMs / MINUTE)) })
-        : t("status.running", { phase, time: clock(run.end) }),
+        ? t(`status.paused${labeled}`, { phase, label: run.label, left: minutes(Math.ceil(leftMs / MINUTE)) })
+        : t(`status.running${labeled}`, { phase, label: run.label, time: clock(run.end) }),
   };
 }
 

@@ -69,15 +69,27 @@ const zh = {
   "page.history.stopped": "提前结束",
   "page.history.range": "{from}–{to}",
 
+  "apps.open": "运行中",
+  "page.apps": "分心应用",
+  "page.apps.on": "专注时切到这些应用，岛上会轻声提醒，一分钟最多一次。",
+  "page.apps.off": "设置里的走神提醒是关闭的。打开后，专注时切到这些应用会提醒。",
+  "page.apps.placeholder": "输入应用名添加",
+  "distractions.text": "{n} 个分心应用：{list}。",
+  "distractions.none": "没有分心应用。",
+  "distractions.off": "走神提醒在设置里是关闭的。",
+  "joined.sentences": "{a}{b}",
+
   "status.idle": "没有在专注。今天专注了 {minutes}，完成 {n} 个。",
   "status.running": "{phase}中，{time} 结束。",
   "status.paused": "{phase}已暂停，还剩 {left}。",
+  "status.running.label": "专注「{label}」，{time} 结束。",
+  "status.paused.label": "专注「{label}」已暂停，还剩 {left}。",
   "stats.text": "最近 {days} 天专注了 {minutes}，完成 {n} 个番茄，最长连续 {best} 天。",
 
-  "error.idle": "现在没有在走的专注或休息。用 start 开始一轮专注。",
-  "error.not-paused": "现在没有暂停的专注或休息。用 status 查看状态。",
-  "error.already-paused": "这一轮在暂停中。用 resume 继续。",
-  "error.no-break": "现在不在休息。用 status 查看状态，用 start 开始专注。",
+  "error.idle": "现在没有在走的专注或休息。用「开始专注」开始一轮。",
+  "error.not-paused": "现在没有暂停的专注或休息。",
+  "error.already-paused": "这一轮在暂停中。用「继续专注」接着走。",
+  "error.no-break": "现在不在休息，没有可跳过的。用「开始专注」开始一轮。",
 };
 
 type Key = keyof typeof zh;
@@ -145,20 +157,33 @@ const en: Record<Key, string> = {
   "page.history.stopped": "Ended early",
   "page.history.range": "{from}–{to}",
 
+  "apps.open": "Open",
+  "page.apps": "Distracting apps",
+  "page.apps.on": "Switch to one of these apps during focus and the island notes it, at most once a minute.",
+  "page.apps.off": "Drift alerts are off in settings. Turn them on to get a note for these apps.",
+  "page.apps.placeholder": "Type an app name to add",
+  "distractions.text": "{n} distracting apps: {list}.",
+  "distractions.none": "No distracting apps.",
+  "distractions.off": "Drift alerts are off in settings.",
+  "joined.sentences": "{a} {b}",
+
   "status.idle": "Not focusing. {minutes} of focus today, {n} sessions done.",
   "status.running": "{phase} until {time}.",
   "status.paused": "{phase} paused with {left} left.",
+  "status.running.label": "Focusing on {label} until {time}.",
+  "status.paused.label": "Focus on {label} paused with {left} left.",
   "stats.text": "{minutes} of focus in the last {days} days, {n} sessions done, best streak {best} days.",
 
-  "error.idle": "No focus session or break is running. Call start to begin a focus session.",
-  "error.not-paused": "Nothing is paused. Call status to read the state.",
-  "error.already-paused": "The session is paused. Call resume to go on.",
-  "error.no-break": "No break is running. Call status to read the state, or start to begin a focus session.",
+  "error.idle": "No focus session or break is running. Run Start Focus to begin one.",
+  "error.not-paused": "Nothing is paused.",
+  "error.already-paused": "The session is paused. Run Resume Focus to go on.",
+  "error.no-break": "No break is running, so there is nothing to skip. Run Start Focus to begin a session.",
 };
 
 /** English sentences for a count of one, picked by `t` when `vars.n` is 1. */
 const enOne: Partial<Record<Key, string>> = {
   "drifts": "1 drift",
+  "distractions.text": "1 distracting app: {list}.",
   "page.today": "{minutes} of focus today, 1 session done.",
   "page.report.days.value": "1 day",
   "status.idle": "Not focusing. {minutes} of focus today, 1 session done.",

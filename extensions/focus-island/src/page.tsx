@@ -1,9 +1,10 @@
 // The page: a sentence of today, the session on the clock or the field that starts one, a year of focus minutes,
 // the weekly report and the sessions of the day picked on the heatmap. It reads the service's state through a
 // store, so a session started from the island, the launcher or an agent shows here.
-import { Button, Chart, Column, Heatmap, List, Metadata, Page, Progress, Row, Scroll, Section, Segmented, Text, TextField, Timer } from "@wallive/sdk";
+import { Button, Chart, Column, Heatmap, List, Metadata, Page, Progress, Row, Scroll, Section, Segmented, Text, TextField, Timer, Tokens } from "@wallive/sdk";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { addDays, clock, dayOf, iso } from "./clock";
+import { appOptions, resolveApp, titled } from "./distractions";
 import * as focus from "./focus";
 import { weekOf, type Ledger } from "./stats";
 import { dayTitle, minutes, phaseName, shortDay, t, weekday } from "./strings";
@@ -167,6 +168,20 @@ function History({ ledger, day, length }: { ledger: Ledger; day: string; length:
   );
 }
 
+/** The apps a switch to counts as a drift: a menu of the installed apps, open ones first, and any typed name. */
+function DistractingApps() {
+  const options = useMemo(appOptions, []);
+  const known = new Set(options.map((o) => o.value));
+  const change = (list: { value: string; title?: string }[]) =>
+    void focus.updateDistractions(list.map((a) => (known.has(a.value) ? { value: a.value, title: a.title ?? a.value } : resolveApp(a.value)))).catch(report);
+  return (
+    <Section id="apps-section" title={t("page.apps")} gap={12}>
+      <Text tone="secondary">{focus.driftOn() ? t("page.apps.on") : t("page.apps.off")}</Text>
+      <Tokens id="apps" value={titled()} options={options} placeholder={t("page.apps.placeholder")} onChange={change} />
+    </Section>
+  );
+}
+
 function FocusIsland() {
   const version = useSyncExternalStore(focus.subscribe, focus.snapshot);
   const today = dayOf();
@@ -190,6 +205,7 @@ function FocusIsland() {
         </Section>
         <WeekReport ledger={ledger} today={today} />
         <History ledger={ledger} day={day} length={length} />
+        <DistractingApps />
         </Column>
       </Scroll>
     </Page>
