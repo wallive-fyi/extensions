@@ -1,0 +1,176 @@
+id = "dev.mrzrb.focus-island"
+name = "专注岛"
+language = "zh-Hans"
+description = "番茄钟和专注统计：灵动岛上走倒计时，菜单栏显示剩余时间，专注时切到让你分心的应用会轻声提醒；页面里有一年的专注热力图和周报。数据只存在本机。"
+icon = "icon.svg"
+permissions = ["sys.app"]
+page = "page"
+version = "1.0.0"
+author = "Mrzrb"
+license = "MIT"
+categories = ["productivity"]
+homepage = "https://github.com/wallive-fyi/extensions/tree/main/extensions/focus-island"
+
+[service]
+run = "src/service.tsx"
+
+[[command]]
+name = "page"
+title = "专注岛"
+description = "Open the Focus Island page: the session running now, a year heat map of focus minutes, this week's report and the sessions of a day."
+launcher = "page"
+
+[[command]]
+name = "start"
+title = "开始专注"
+description = "Start a focus session. minutes defaults to the focus length setting (25); label names what the session is for and shows in the report. Starting while a session or a break runs replaces it; a replaced focus session is recorded with the minutes it ran. Returns the status."
+args = { type = "object", properties = { minutes = { type = "number", title = "分钟", minimum = 1, maximum = 180 }, label = { type = "string", title = "在做什么", maxLength = 80 } } }
+
+[[command]]
+name = "pause"
+title = "暂停专注"
+description = "Pause the running focus session or break; the countdown holds until resume. Fails with a message when nothing runs. Returns the status."
+
+[[command]]
+name = "resume"
+title = "继续专注"
+description = "Resume the paused focus session or break. Fails with a message when nothing is paused. Returns the status."
+
+[[command]]
+name = "stop"
+title = "结束专注"
+description = "End the running focus session or break now. A focus session of 1 minute or more is recorded as stopped with the minutes it ran. Returns the status."
+
+[[command]]
+name = "skip"
+title = "跳过休息"
+description = "End the running break and start the next focus session at once. Fails with a message when no break runs. Returns the status."
+
+[[command]]
+name = "rest"
+title = "开始休息"
+description = "Start the break the cycle calls for next: a short break, or a long break after every few focus sessions (long_break_every, 4 by default). Replaces what runs; a replaced focus session is recorded with the minutes it ran. Returns the status."
+
+[[command]]
+name = "status"
+title = "专注状态"
+description = "Read the state: phase (focus, short-break, long-break or idle), paused, label, the end time and seconds left, the round in the cycle, and today's minutes and finished sessions."
+
+[[command]]
+name = "stats"
+title = "专注统计"
+description = "Read focus statistics for the last days (1 to 371, 7 by default): minutes and finished sessions per day, the total, the current and best streak of days with a finished session, the most used labels and the drift count (switches to a distracting app during focus)."
+args = { type = "object", properties = { days = { type = "integer", title = "天数", minimum = 1, maximum = 371 } } }
+
+[[command]]
+name = "fire"
+title = "到点"
+description = "Ends a focus session or a break when its schedule comes due."
+hidden = true
+
+[[command]]
+name = "drift"
+title = "切换应用"
+description = "Receives app switches while a focus session runs."
+hidden = true
+
+[[command]]
+name = "relocalize"
+title = "切换语言"
+description = "Shows the island and the menu bar again in the new interface language."
+hidden = true
+
+[[command]]
+name = "activity"
+title = "菜单栏按钮"
+description = "Handles the buttons of the menu bar popover."
+hidden = true
+
+[[hook]]
+on = "dev.mrzrb.focus-island/activity.event"
+command = "activity"
+where = [{ path = "body.type", eq = "click" }]
+
+[[hook]]
+on = "sys.language.changed"
+command = "relocalize"
+
+[[collection]]
+name = "sessions"
+index = ["day", "start"]
+
+[[collection]]
+name = "state"
+
+[[setting]]
+key = "focus_minutes"
+type = "number"
+title = "专注时长（分钟）"
+default = 25
+min = 5
+max = 120
+step = 5
+
+[[setting]]
+key = "short_break_minutes"
+type = "number"
+title = "短休息（分钟）"
+default = 5
+min = 1
+max = 30
+
+[[setting]]
+key = "long_break_minutes"
+type = "number"
+title = "长休息（分钟）"
+default = 15
+min = 5
+max = 60
+step = 5
+
+[[setting]]
+key = "long_break_every"
+type = "number"
+title = "每几轮专注长休息一次"
+default = 4
+min = 2
+max = 8
+
+[[setting]]
+key = "auto_break"
+type = "boolean"
+title = "专注结束后开始休息"
+default = true
+
+[[setting]]
+key = "menubar"
+type = "boolean"
+title = "在菜单栏显示剩余时间"
+default = true
+
+[[setting]]
+key = "drift"
+type = "boolean"
+title = "专注时切到分心应用提醒我"
+default = true
+
+[[setting]]
+key = "distractions"
+type = "text"
+title = "分心的应用（每行一个名称或 Bundle ID）"
+default = "微信\nWeChat\nQQ\nTelegram\nDiscord\n哔哩哔哩\nbilibili\nYouTube"
+
+[[setting]]
+key = "sound"
+type = "boolean"
+title = "提示音"
+default = true
+
+[[setting]]
+key = "sound_volume"
+type = "number"
+title = "提示音音量"
+default = 60
+min = 0
+max = 100
+step = 5

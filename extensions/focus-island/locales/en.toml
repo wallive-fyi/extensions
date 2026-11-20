@@ -1,0 +1,80 @@
+name = "Focus Island"
+description = "A pomodoro timer with focus statistics: the countdown runs on the island, the menu bar shows the time left, and a switch to a distracting app during focus gets a gentle note. The page holds a year heat map of focus and a weekly report. Data stays on this Mac."
+
+[command.page]
+title = "Focus Island"
+
+[command.start]
+title = "Start Focus"
+
+[command.start.args.minutes]
+title = "Minutes"
+
+[command.start.args.label]
+title = "Working on"
+
+[command.pause]
+title = "Pause Focus"
+
+[command.resume]
+title = "Resume Focus"
+
+[command.stop]
+title = "End Focus"
+
+[command.skip]
+title = "Skip Break"
+
+[command.rest]
+title = "Start Break"
+
+[command.status]
+title = "Focus Status"
+
+[command.stats]
+title = "Focus Statistics"
+
+[command.stats.args.days]
+title = "Days"
+
+[command.activity]
+title = "Menu Bar Buttons"
+
+[command.fire]
+title = "Phase Due"
+
+[command.drift]
+title = "App Switched"
+
+[command.relocalize]
+title = "Language Switched"
+
+[setting.focus_minutes]
+title = "Focus length (minutes)"
+
+[setting.short_break_minutes]
+title = "Short break (minutes)"
+
+[setting.long_break_minutes]
+title = "Long break (minutes)"
+
+[setting.long_break_every]
+title = "Long break after this many sessions"
+
+[setting.auto_break]
+title = "Start the break when focus ends"
+
+[setting.menubar]
+title = "Show the time left in the menu bar"
+
+[setting.drift]
+title = "Note a switch to a distracting app"
+
+[setting.distractions]
+title = "Distracting apps (a name or bundle ID per line)"
+
+[setting.sound]
+title = "Sound cue"
+
+[setting.sound_volume]
+title = "Sound cue volume"
