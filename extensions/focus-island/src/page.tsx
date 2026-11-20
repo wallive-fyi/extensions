@@ -14,6 +14,13 @@ const LENGTHS = ["15", "25", "45", "60"];
 
 const report = (e: unknown) => console.error(String(e));
 
+/** The top of the weekly chart's axis: the tallest day plus a tenth, rounded up to a step of 20, 50 or 100 minutes so the top lands on a labeled tick. */
+function axisTop(tallest: number): number {
+  const want = Math.max(60, tallest * 1.1);
+  const step = want <= 100 ? 20 : want <= 300 ? 50 : 100;
+  return Math.ceil(want / step) * step;
+}
+
 function Summary({ ledger, today }: { ledger: Ledger; today: string }) {
   const day = ledger.day(today);
   const sentence =
@@ -96,7 +103,6 @@ function WeekReport({ ledger, today }: { ledger: Ledger; today: string }) {
   const span = ledger.span(week.sunday, 7);
   const labels = ledger.topLabels(week.sunday, 7);
   const points: [string, number][] = week.days.map((d) => [weekday(d), Math.round(ledger.day(d).minutes)]);
-  const most = Math.max(60, ...points.map(([, m]) => m));
   const best = ledger.bestStreak(today, YEAR);
   const average = span.activeDays > 0 ? span.minutes / span.activeDays : 0;
   return (
@@ -116,7 +122,7 @@ function WeekReport({ ledger, today }: { ledger: Ledger; today: string }) {
       </Row>
       <Row gap={32} align="start">
         <Column gap={8} width="fill">
-          <Chart marks={[{ mark: "bar", points, color: "indigo9", name: t("page.report.focus") }]} yDomain={[0, Math.ceil(most / 30) * 30]} yLabel={t("unit.minutes")} legend={false} height={180} />
+          <Chart marks={[{ mark: "bar", points, color: "indigo9", name: t("page.report.focus") }]} yDomain={[0, axisTop(Math.max(...points.map(([, m]) => m)))]} yLabel={t("unit.minutes")} legend={false} height={180} />
           {span.minutes === 0 ? <Text style="caption" tone="secondary">{t("page.report.empty")}</Text> : null}
         </Column>
         <Column gap={16} width={240}>
@@ -139,7 +145,7 @@ function WeekReport({ ledger, today }: { ledger: Ledger; today: string }) {
 function History({ ledger, day, length }: { ledger: Ledger; day: string; length: string }) {
   const sessions = ledger.sessionsOn(day);
   return (
-    <Section id="history-section" title={dayTitle(day)} count={sessions.length > 0 ? sessions.length : undefined} gap={8}>
+    <Section id="history-section" title={dayTitle(day)} gap={8}>
       <List
         id="history"
         items={sessions.map((s) => {
